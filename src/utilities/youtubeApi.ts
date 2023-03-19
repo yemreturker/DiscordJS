@@ -60,18 +60,20 @@ async function GetPlayListInfo(query: string): Promise<SongList> {
     };
 }
 
+const regexList = {
+    yt_list1:
+        /^(https?:\/\/)?(www.|music.|)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)&list=([a-zA-Z0-9_-]+)?(&ab_channel=[a-zA-Z0-9_-]+)?(&feature=share)?$/,
+    yt_list2: /^(https?:\/\/)?(www.|music.|)?youtube\.com\/playlist\?list=([a-zA-Z0-9_-]+)?&?(feature=share)?$/,
+    yt_video: /^(https?:\/\/)?(www.|music.|)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)?&?(ab_channel=[a-zA-Z0-9_-]+)?&?(feature=share)?$/,
+};
+
 export default async function GetTracks(query: string): Promise<Song | SongList> {
-    const yt_list1 =
-        /^(https?:\/\/)?(www|music\.)?youtube\.com\/watch\?v=[a-zA-Z0-9_-]{11}&?list=([a-zA-Z0-9_-]+)?&?(ab_channel=[a-zA-Z0-9_-]+)?&?(feature=share)?$/;
-    const yt_list2 = /^(https?:\/\/)?(www|music\.)?youtube\.com\/playlist\?list=([a-zA-Z0-9_-]+)?&?(feature=share)?$/;
-    const yt_video =
-        /^(https?:\/\/)?(www|music\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)?&?(ab_channel=[a-zA-Z0-9_-]+)?&?(feature=share)?$/;
-    if (yt_list1.test(query)) {
-        return await GetPlayListInfo(query.match(yt_list1)![3]);
-    } else if (yt_list2.test(query)) {
-        return await GetPlayListInfo(query.match(yt_list2)![3]);
-    } else if (yt_video.test(query)) {
-        return await GetSongInfoById(query.match(yt_video)![3]);
+    if (regexList.yt_list1.test(query)) {
+        return await GetPlayListInfo(query.match(regexList.yt_list1)![4]);
+    } else if (regexList.yt_list2.test(query)) {
+        return await GetPlayListInfo(query.match(regexList.yt_list2)![3]);
+    } else if (regexList.yt_video.test(query)) {
+        return await GetSongInfoById(query.match(regexList.yt_video)![3]);
     } else {
         return await GetSongInfoByName(query);
     }

@@ -63,7 +63,7 @@ const CheckMemberStatus = async (interaction: CommandInteraction, guild: Guild, 
     return true;
 };
 
-async function SetGuildConnectionTimeout(guildId: string, callback: () => void, delay: number = 60000) {
+async function SetGuildConnectionTimeout(guildId: string, callback: () => void, delay: number = 1000 * 60 * 5) {
     try {
         guildConstructors.get(guildId)!.guildConnectionTimeouts = setTimeout(callback, delay);
     } catch (error) {
@@ -73,9 +73,8 @@ async function SetGuildConnectionTimeout(guildId: string, callback: () => void, 
 
 async function ClearGuildConnectionTimeout(guildId: string) {
     try {
-        const timeout = guildConstructors.get(guildId)!.guildConnectionTimeouts;
-        if (timeout) {
-            clearTimeout(timeout);
+        if (guildConstructors.get(guildId)!.guildConnectionTimeouts) {
+            clearTimeout(guildConstructors.get(guildId)!.guildConnectionTimeouts);
             guildConstructors.get(guildId)!.guildConnectionTimeouts = undefined;
         }
     } catch (error) {
@@ -96,7 +95,7 @@ const OnEnd = async (guildId: string) => {
             await ClearGuildConnectionTimeout(guildId);
             await SetGuildConnectionTimeout(guildId, () => {
                 if (guildConstructor.connection!.state.status === VoiceConnectionStatus.Ready) {
-                    guildConstructor.textChannel?.send('I am leaving because I have been afk for 1 minute.').then((msg) =>
+                    guildConstructor.textChannel?.send('I am leaving because I have been afk for 5 minute.').then((msg) =>
                         setTimeout(() => {
                             msg.delete();
                         }, 5000)
@@ -171,9 +170,9 @@ export const Play: Command = {
             const tracks = songList.Songs;
             guildConstructor.songs = guildConstructor.songs.concat(tracks);
             const embed = new EmbedBuilder()
-                .setAuthor({ name: 'List added queue!' })
+                .setAuthor({ name: `${songList.Songs.length} songs added queue!` })
                 .setColor(Colors.Purple)
-                .setFields({ name: 'Artist', value: `[${songList.Author.Name}](${songList.Author.URL})`, inline: true })
+                .setFields({ name: 'Artist', value: `[${songList.Author.Name}](${songList.Author.URL})` })
                 .setFooter({ text: 'Requested by ' + member.user.username, iconURL: member.user.avatarURL() as string })
                 .setThumbnail(songList.IconURL)
                 .setTitle(songList.Title)
