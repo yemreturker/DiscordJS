@@ -21,23 +21,23 @@ To use this music bot template, follow these steps:
 
 * Clone this repository to your local machine
 ```bash
-git clone https://github.com/yemreturker/DiscordJS.git
+$ git clone https://github.com/yemreturker/DiscordJS.git
 ```
 * Run npm install to install the required dependencies
 ```bash
-npm install
+$ npm install
 ```
 * Create a .env file and add your Discord bot token using the format BOT_TOKEN=<your_bot_token>
 ```bash
-touch .env
+$ touch .env
 ```
 * Run npm run build to build bot
 ```bash
-npm run build
+$ npm run build
 ```
 * Run npm run start to start the bot
 ```bash
-npm run start
+$ npm run start
 ```
 
 ## Usage
