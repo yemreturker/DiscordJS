@@ -8,6 +8,7 @@ export default interface GuildConstructor {
     textChannel: TextBasedChannel | undefined;
     shuffle: boolean;
     lastSongIndex: number;
+    lastSong: Song | null;
     loop: boolean;
     songs: Song[];
 }

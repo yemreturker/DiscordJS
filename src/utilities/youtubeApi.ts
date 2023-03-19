@@ -67,14 +67,19 @@ const regexList = {
     yt_video: /^(https?:\/\/)?(www.|music.|)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)?&?(ab_channel=[a-zA-Z0-9_-]+)?&?(feature=share)?$/,
 };
 
-export default async function GetTracks(query: string): Promise<Song | SongList> {
-    if (regexList.yt_list1.test(query)) {
-        return await GetPlayListInfo(query.match(regexList.yt_list1)![4]);
-    } else if (regexList.yt_list2.test(query)) {
-        return await GetPlayListInfo(query.match(regexList.yt_list2)![3]);
-    } else if (regexList.yt_video.test(query)) {
-        return await GetSongInfoById(query.match(regexList.yt_video)![3]);
-    } else {
-        return await GetSongInfoByName(query);
+export default async function GetTracks(query: string): Promise<Song | SongList | null> {
+    try {
+        if (regexList.yt_list1.test(query)) {
+            return await GetPlayListInfo(query.match(regexList.yt_list1)![4]);
+        } else if (regexList.yt_list2.test(query)) {
+            return await GetPlayListInfo(query.match(regexList.yt_list2)![3]);
+        } else if (regexList.yt_video.test(query)) {
+            return await GetSongInfoById(query.match(regexList.yt_video)![3]);
+        } else {
+            return await GetSongInfoByName(query);
+        }
+    } catch (error) {
+        console.error(error);
+        return null;
     }
 }

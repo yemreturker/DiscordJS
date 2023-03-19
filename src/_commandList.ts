@@ -1,4 +1,4 @@
-import { Play, Leave, Queue, CurrentlyPlaying, Skip, Repeat, SkipTo, Shuffle } from './commands/music';
+import { Play, Leave, Queue, NowPlaying, Skip, Repeat, SkipTo, Shuffle, RemoveAt, Back } from './commands/music';
 import Command from './interfaces/command';
 
-export const CommandList: Command[] = [Play, Leave, Queue, CurrentlyPlaying, Skip, Repeat, SkipTo, Shuffle];
+export const CommandList: Command[] = [Play, Leave, Queue, NowPlaying, Skip, Repeat, SkipTo, Shuffle, RemoveAt, Back];

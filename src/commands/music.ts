@@ -85,7 +85,10 @@ async function ClearGuildConnectionTimeout(guildId: string) {
 const OnEnd = async (guildId: string) => {
     try {
         const guildConstructor = guildConstructors.get(guildId)!;
-        if (!guildConstructor.loop) guildConstructor.songs.splice(guildConstructor.lastSongIndex, 1);
+        if (!guildConstructor.loop) {
+            guildConstructor.lastSong = guildConstructor.songs.at(guildConstructor.lastSongIndex) || null;
+            guildConstructor.songs.splice(guildConstructor.lastSongIndex, 1);
+        }
         if (guildConstructor.songs && guildConstructor.songs.length > 0) {
             if (guildConstructor.shuffle) guildConstructor.lastSongIndex = Math.floor(Math.random() * guildConstructor.songs.length);
             else guildConstructor.lastSongIndex = 0;
@@ -158,6 +161,7 @@ export const Play: Command = {
                 loop: false,
                 shuffle: false,
                 lastSongIndex: 0,
+                lastSong: null,
                 songs: [],
             });
         }
@@ -165,7 +169,11 @@ export const Play: Command = {
         const guildConstructor = guildConstructors.get(guild.id)!;
         const query: string = interaction.options.get('query')!.value as string;
         const Tracks = await GetTracks(query);
-        if (await isSongList(Tracks)) {
+        if (Tracks == null) {
+            await interaction.reply('Something went wrong!').then((msg) => setTimeout(() => msg.delete, 5000));
+            return;
+        }
+        if (Tracks != null && (await isSongList(Tracks))) {
             const songList: SongList = Tracks as SongList;
             const tracks = songList.Songs;
             guildConstructor.songs = guildConstructor.songs.concat(tracks);
@@ -269,8 +277,8 @@ export const Queue: Command = {
     },
 };
 
-export const CurrentlyPlaying: Command = {
-    data: new SlashCommandBuilder().setName('currentlyplaying').setDescription('Show bot currently playing song.'),
+export const NowPlaying: Command = {
+    data: new SlashCommandBuilder().setName('now-playing').setDescription('Show bot currently playing song.'),
 
     run: async (interaction: CommandInteraction) => {
         try {
@@ -380,7 +388,7 @@ export const SkipTo: Command = {
         .setName('skipto')
         .setDescription('Skip songs to which you want to get song.')
         .addStringOption((option) =>
-            option.setName('param').setDescription('The song number which you want to skip to.').setRequired(true)
+            option.setName('index').setDescription('The song number which you want to skip to.').setRequired(true)
         ),
 
     run: async (interaction: CommandInteraction) => {
@@ -392,19 +400,19 @@ export const SkipTo: Command = {
                 await interaction.reply('I am not in any voice channel').then((msg) => setTimeout(() => msg.delete(), 5000));
                 return;
             }
-            const param = Number(interaction.options.get('param')!.value);
-            if (isNaN(param)) {
-                await interaction.reply('Param must be a number');
+            const index = Number(interaction.options.get('index')!.value);
+            if (isNaN(index)) {
+                await interaction.reply('Index must be a number!');
                 return;
             }
-            if (param > guildConstructor.songs.length) {
-                await interaction.reply('Param can not be greater than the queue length');
+            if (index > guildConstructor.songs.length) {
+                await interaction.reply('Index can not be greater than the queue length!');
                 return;
-            } else if (param < 1) {
-                await interaction.reply('Param can not be less than 1. `If you want to skip only 1 song. You can try /skip command!`');
+            } else if (index < 1) {
+                await interaction.reply('Index can not be less than 1. `If you want to skip only 1 song. You can try /skip command!`');
                 return;
             }
-            guildConstructor.songs.splice(0, param - 2);
+            guildConstructor.songs.splice(0, index - 2);
             const embed = new EmbedBuilder();
             if (guildConstructor.loop) {
                 guildConstructor.loop = false;
@@ -457,6 +465,90 @@ export const Shuffle: Command = {
                     .setFooter({ text: 'Requested by ' + member.user.username, iconURL: member.user.avatarURL() as string })
                     .setDescription(`**Now, Shuffle mode is ${guildConstructor.shuffle ? 'on' : 'off'}**`);
                 await interaction.reply({ embeds: [embed] });
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    },
+};
+
+export const RemoveAt: Command = {
+    data: new SlashCommandBuilder()
+        .setName('remove-at')
+        .setDescription('Remove song which you want to remove song from queue.')
+        .addStringOption((option) =>
+            option.setName('index').setDescription('The song number which you want to remove to queue.').setRequired(true)
+        ),
+
+    run: async (interaction: CommandInteraction) => {
+        try {
+            const guild = interaction.guild!;
+            const member = guild.members.cache.get(interaction.user.id)!;
+            const guildConstructor = guildConstructors.get(guild.id);
+            if (!guildConstructor || !guildConstructor.connection) {
+                await interaction.reply('I am not in any voice channel').then((msg) => setTimeout(() => msg.delete(), 5000));
+                return;
+            }
+            if (!guildConstructor.songs || guildConstructor.songs.length <= 0) {
+                await interaction.reply('There is no song in queue!').then((msg) => setTimeout(() => msg.delete(), 5000));
+            } else {
+                const index = Number(interaction.options.get('index')!.value);
+                if (isNaN(index)) {
+                    await interaction.reply('Index must be a number!');
+                    return;
+                }
+                if (index > guildConstructor.songs.length) {
+                    await interaction.reply('Index can not be greater than the queue length!');
+                    return;
+                } else if (index < 1) {
+                    await interaction.reply('Index can not be less than 1!');
+                    return;
+                }
+                const song = guildConstructor.songs.at(index - 1)!;
+                guildConstructor.songs.splice(index - 1, 1);
+                const embed = new EmbedBuilder()
+                    .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
+                    .setColor(Colors.Purple)
+                    .setFooter({ text: 'Requested by ' + member.user.username, iconURL: member.user.avatarURL() as string })
+                    .addFields({ name: 'Removed from Queue!', value: `**${index}.)**[${song.Title}](${song.URL})` })
+                    .setDescription(`[${song.Title}](${song.URL}) removed from queue!`);
+                await interaction.reply({ embeds: [embed] });
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    },
+};
+
+export const Back: Command = {
+    data: new SlashCommandBuilder().setName('back').setDescription('Back to previous song and play it!'),
+
+    run: async (interaction: CommandInteraction) => {
+        try {
+            const guild = interaction.guild!;
+            const member = guild.members.cache.get(interaction.user.id)!;
+            const guildConstructor = guildConstructors.get(guild.id);
+            if (!guildConstructor || !guildConstructor.connection) {
+                await interaction.reply('I am not in any voice channel').then((msg) => setTimeout(() => msg.delete(), 5000));
+                return;
+            }
+            const song = guildConstructor.lastSong;
+            if (song != null) {
+                PlayNext(song, guild.id);
+                const embed = new EmbedBuilder()
+                    .setAuthor({ name: 'Now playing! - Previous Song' })
+                    .setColor(Colors.Purple)
+                    .setFields(
+                        { name: 'Artist', value: `[${song.Author.Name}](${song.Author.URL})`, inline: true },
+                        { name: 'Duration', value: song.Duration || '-', inline: true }
+                    )
+                    .setFooter({ text: 'Requested by ' + member.user.username, iconURL: member.user.avatarURL() as string })
+                    .setThumbnail(song.IconURL)
+                    .setTitle(song.Title)
+                    .setURL(song.URL);
+                await interaction.reply({ embeds: [embed] });
+            } else {
+                await interaction.reply('No song played before!');
             }
         } catch (error) {
             console.error(error);
