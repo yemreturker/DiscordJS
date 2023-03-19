@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, VoiceState } from 'discord.js';
+import { Client, GatewayIntentBits, VoiceState as vs } from 'discord.js';
 import { OnGuildCreate, OnGuildDelete } from './events/onGuildChange';
 import { OnInteraction } from './events/onInteraction';
 import { OnReady } from './events/onReady';
@@ -10,10 +10,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 (async () => {
     client.once('ready', async () => await OnReady(client));
     client.on('interactionCreate', async (interaction) => await OnInteraction(interaction));
-    client.on(
-        'voiceStateUpdate',
-        async (oldState, newState) => await OnVoiceStateUpdate(client, oldState as VoiceState, newState as VoiceState)
-    );
+    client.on('voiceStateUpdate', async (oldState, newState) => await OnVoiceStateUpdate(client, oldState as vs, newState as vs));
     client.on('guildCreate', (guild) => OnGuildCreate(guild));
     client.on('guildDelete', (guild) => OnGuildDelete(guild));
     await client.login(Token);

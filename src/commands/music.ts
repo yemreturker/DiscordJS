@@ -65,8 +65,7 @@ const CheckMemberStatus = async (interaction: CommandInteraction, guild: Guild, 
 
 async function SetGuildConnectionTimeout(guildId: string, callback: () => void, delay: number = 60000) {
     try {
-        const timeout = setTimeout(callback, delay);
-        guildConstructors.get(guildId)!.guildConnectionTimeouts = timeout;
+        guildConstructors.get(guildId)!.guildConnectionTimeouts = setTimeout(callback, delay);
     } catch (error) {
         console.error(error);
     }
