@@ -264,12 +264,12 @@ export const Queue: Command = {
             }
             const songsList = guildConstructor.songs?.map((song, index) => formatQueueSong(index, song.Title, song.URL)).join('\n');
             const embed = new EmbedBuilder()
-                .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.avatarURL() as string })
-                .setTitle(guild.name + ' queues! ' + (guildConstructor.loop == true ? 'Loop Active' : ''))
-                .setThumbnail(guild.iconURL() as string)
-                .setDescription(songsList || 'Song List empty!')
                 .setColor(Colors.Purple)
-                .setFooter({ text: ('Requested by ' + member.user.username) as string, iconURL: member.user.avatarURL() as string });
+                .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
+                .setFooter({ text: `Requested by ${member.displayName}`, iconURL: member.displayAvatarURL() as string })
+                .setTitle(guild.name + ' queues! ' + (guildConstructor.loop == true ? 'Loop Active' : ''))
+                .setThumbnail(guild.client.user.displayAvatarURL() as string)
+                .setDescription(songsList || 'Song List empty!');
             await interaction.reply({ embeds: [embed] });
         } catch (error) {
             console.error(error);
@@ -295,16 +295,16 @@ export const NowPlaying: Command = {
                 return;
             }
             const embed = new EmbedBuilder()
-                .setAuthor({ name: 'Now playing!' + (guildConstructor.loop == true ? 'Loop Active' : '') })
                 .setColor(Colors.Purple)
+                .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
+                .setFooter({ text: `Requested by ${member.displayName}`, iconURL: member.displayAvatarURL() as string })
+                .setTitle(`Now playing!`)
+                .setDescription(`**[${song.Title}](${song.URL})**`)
+                .setThumbnail(song.IconURL)
                 .setFields(
                     { name: 'Artist', value: `[${song.Author.Name}](${song.Author.URL})`, inline: true },
                     { name: 'Duration', value: song.Duration || '-', inline: true }
-                )
-                .setFooter({ text: 'Requested by ' + member.user.username, iconURL: member.user.avatarURL() as string })
-                .setThumbnail(song.IconURL)
-                .setTitle(song.Title)
-                .setURL(song.URL);
+                );
             await interaction.reply({ embeds: [embed] });
         } catch (error) {
             console.error(error);
@@ -327,9 +327,9 @@ export const Skip: Command = {
             const embed = new EmbedBuilder();
             if (guildConstructor.loop) {
                 guildConstructor.loop = false;
-                embed.setTitle('Skipped! - Loop mode off');
+                embed.setTitle('Skipped, Now playing! - Loop mode off');
             } else {
-                embed.setTitle('Skipped!');
+                embed.setTitle('Skipped, Now playing!');
             }
             await OnEnd(guild.id);
             const song = guildConstructor.songs.at(guildConstructor.lastSongIndex);
@@ -341,11 +341,15 @@ export const Skip: Command = {
                 return;
             }
             embed
-                .setAuthor({ name: guild.client.user.username, iconURL: guild.client.user.avatarURL() as string })
                 .setColor(Colors.Purple)
-                .setFields({ name: 'Now Playing!', value: `[${song.Title}](${song.URL})` })
-                .setFooter({ text: 'Requested by ' + member.user.username, iconURL: member.user.avatarURL() as string })
-                .setThumbnail(song.IconURL);
+                .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
+                .setFooter({ text: `Requested by ${member.displayName}`, iconURL: member.displayAvatarURL() as string })
+                .setDescription(`**[${song.Title}](${song.URL})**`)
+                .setThumbnail(song.IconURL)
+                .setFields(
+                    { name: 'Artist', value: `[${song.Author.Name}](${song.Author.URL})`, inline: true },
+                    { name: 'Duration', value: song.Duration || '-', inline: true }
+                );
             await interaction.reply({ embeds: [embed] });
         } catch (error) {
             console.error(error);
@@ -371,9 +375,9 @@ export const Repeat: Command = {
             } else {
                 guildConstructor.loop = !guildConstructor.loop;
                 const embed = new EmbedBuilder()
-                    .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
                     .setColor(Colors.Purple)
-                    .setFooter({ text: 'Requested by ' + member.user.username, iconURL: member.user.avatarURL() as string })
+                    .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
+                    .setFooter({ text: `Requested by ${member.displayName}`, iconURL: member.displayAvatarURL() as string })
                     .setDescription(`**Now, Loop mode is ${guildConstructor.loop ? 'on' : 'off'}**`);
                 await interaction.reply({ embeds: [embed] });
             }
@@ -416,9 +420,9 @@ export const SkipTo: Command = {
             const embed = new EmbedBuilder();
             if (guildConstructor.loop) {
                 guildConstructor.loop = false;
-                embed.setTitle('Skipped! - Loop mode off');
+                embed.setTitle('Skipped, Now playing! - Loop mode off');
             } else {
-                embed.setTitle('Skipped!');
+                embed.setTitle('Skipped, Now playing!');
             }
             await OnEnd(guild.id);
             const song = guildConstructor.songs.at(0);
@@ -430,11 +434,15 @@ export const SkipTo: Command = {
                 return;
             }
             embed
-                .setAuthor({ name: guild.client.user.username, iconURL: guild.client.user.avatarURL() as string })
                 .setColor(Colors.Purple)
-                .setFields({ name: 'Now Playing!', value: `[${song.Title}](${song.URL})` })
-                .setFooter({ text: 'Requested by ' + member.user.username, iconURL: member.user.avatarURL() as string })
-                .setThumbnail(song.IconURL);
+                .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
+                .setFooter({ text: `Requested by ${member.displayName}`, iconURL: member.displayAvatarURL() as string })
+                .setDescription(`**[${song.Title}](${song.URL})**`)
+                .setThumbnail(song.IconURL)
+                .setFields(
+                    { name: 'Artist', value: `[${song.Author.Name}](${song.Author.URL})`, inline: true },
+                    { name: 'Duration', value: song.Duration || '-', inline: true }
+                );
             await interaction.reply({ embeds: [embed] });
         } catch (error) {
             console.error(error);
@@ -460,9 +468,9 @@ export const Shuffle: Command = {
             } else {
                 guildConstructor.shuffle = !guildConstructor.shuffle;
                 const embed = new EmbedBuilder()
-                    .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
                     .setColor(Colors.Purple)
-                    .setFooter({ text: 'Requested by ' + member.user.username, iconURL: member.user.avatarURL() as string })
+                    .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
+                    .setFooter({ text: `Requested by ${member.displayName}`, iconURL: member.displayAvatarURL() as string })
                     .setDescription(`**Now, Shuffle mode is ${guildConstructor.shuffle ? 'on' : 'off'}**`);
                 await interaction.reply({ embeds: [embed] });
             }
@@ -507,11 +515,11 @@ export const RemoveAt: Command = {
                 const song = guildConstructor.songs.at(index - 1)!;
                 guildConstructor.songs.splice(index - 1, 1);
                 const embed = new EmbedBuilder()
-                    .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
                     .setColor(Colors.Purple)
-                    .setFooter({ text: 'Requested by ' + member.user.username, iconURL: member.user.avatarURL() as string })
+                    .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
+                    .setFooter({ text: `Requested by ${member.displayName}`, iconURL: member.displayAvatarURL() as string })
                     .addFields({ name: 'Removed from Queue!', value: `**${index}.)**[${song.Title}](${song.URL})` })
-                    .setDescription(`[${song.Title}](${song.URL}) removed from queue!`);
+                    .setThumbnail(song.IconURL);
                 await interaction.reply({ embeds: [embed] });
             }
         } catch (error) {
@@ -536,19 +544,19 @@ export const Back: Command = {
             if (song != null) {
                 PlayNext(song, guild.id);
                 const embed = new EmbedBuilder()
-                    .setAuthor({ name: 'Now playing! - Previous Song' })
                     .setColor(Colors.Purple)
+                    .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
+                    .setFooter({ text: `Requested by ${member.displayName}`, iconURL: member.displayAvatarURL() as string })
+                    .setTitle(`Now playing!`)
+                    .setDescription(`**[${song.Title}](${song.URL})**`)
+                    .setThumbnail(song.IconURL)
                     .setFields(
                         { name: 'Artist', value: `[${song.Author.Name}](${song.Author.URL})`, inline: true },
                         { name: 'Duration', value: song.Duration || '-', inline: true }
-                    )
-                    .setFooter({ text: 'Requested by ' + member.user.username, iconURL: member.user.avatarURL() as string })
-                    .setThumbnail(song.IconURL)
-                    .setTitle(song.Title)
-                    .setURL(song.URL);
+                    );
                 await interaction.reply({ embeds: [embed] });
             } else {
-                await interaction.reply('No song played before!');
+                await interaction.reply('No song played before!').then((msg) => setTimeout(() => msg.delete(), 5000));
             }
         } catch (error) {
             console.error(error);
