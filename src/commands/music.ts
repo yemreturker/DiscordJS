@@ -1,18 +1,17 @@
-import { Colors, CommandInteraction, EmbedBuilder, Guild, GuildMember, SlashCommandBuilder } from 'discord.js';
 import {
     AudioPlayerStatus,
     createAudioPlayer,
     createAudioResource,
     getVoiceConnection,
     joinVoiceChannel,
-    VoiceConnection,
     VoiceConnectionStatus,
 } from '@discordjs/voice';
+import { SlashCommandBuilder, CommandInteraction, EmbedBuilder, Colors } from 'discord.js';
+import ytdl, { downloadOptions } from 'ytdl-core';
 import Command from '../interfaces/command';
+import GuildConstructor from '../interfaces/guildConstructor';
 import Song, { SongList } from '../interfaces/song';
 import GetTracks from '../utilities/youtubeApi';
-import ytdl, { downloadOptions } from 'ytdl-core';
-import GuildConstructor from '../interfaces/guildConstructor';
 
 var player = createAudioPlayer();
 player.setMaxListeners(0);
@@ -22,65 +21,6 @@ const ytdl_options: downloadOptions = {
     quality: 'highestaudio',
     highWaterMark: 1 << 25,
 };
-
-function formatQueueSong(index: number, songTitle: string, songURL: string): string {
-    const indexLength = index.toString().length;
-    const padding = indexLength === 3 ? ' ' : indexLength === 2 ? '  ' : indexLength === 1 ? '   ' : '    ';
-    return `**${index + 1}.)**${padding}[${songTitle}](${songURL})`;
-}
-
-const CheckPermissions = async (interaction: CommandInteraction): Promise<boolean> => {
-    const permissions = interaction.appPermissions!;
-    if (!permissions.has('Connect')) {
-        await interaction.reply(`I dont have 'Connect' permission!`).then((message) => setTimeout(() => message.delete(), 5000));
-        return false;
-    }
-    if (!permissions.has('Speak')) {
-        await interaction.reply(`I dont have 'Speak' permission!`).then((message) => setTimeout(() => message.delete(), 5000));
-        return false;
-    }
-    return true;
-};
-
-const CheckMemberStatus = async (interaction: CommandInteraction, guild: Guild, member: GuildMember): Promise<boolean> => {
-    const client = guild.members.cache.get(interaction.client.user.id);
-    if (!member.voice.channel || member.voice.channel == null) {
-        await interaction
-            .reply('You need to be in a voice channel to play music!')
-            .then((message) => setTimeout(() => message.delete(), 10000));
-        return false;
-    }
-    if (guild.afkChannelId && member.voice.channelId === guild.afkChannelId) {
-        await interaction.reply('You are in afk channel!');
-        return false;
-    }
-    if (client?.voice.channel != null && member.voice.channel.id != client.voice.channel.id) {
-        await interaction
-            .reply('You need to be in same voice channel with me to use this command!')
-            .then((message) => setTimeout(() => message.delete(), 10000));
-        return false;
-    }
-    return true;
-};
-
-async function SetGuildConnectionTimeout(guildId: string, callback: () => void, delay: number = 1000 * 60 * 5) {
-    try {
-        guildConstructors.get(guildId)!.guildConnectionTimeouts = setTimeout(callback, delay);
-    } catch (error) {
-        console.error(error);
-    }
-}
-
-async function ClearGuildConnectionTimeout(guildId: string) {
-    try {
-        if (guildConstructors.get(guildId)!.guildConnectionTimeouts) {
-            clearTimeout(guildConstructors.get(guildId)!.guildConnectionTimeouts);
-            guildConstructors.get(guildId)!.guildConnectionTimeouts = undefined;
-        }
-    } catch (error) {
-        console.error(error);
-    }
-}
 
 const OnEnd = async (guildId: string) => {
     try {
@@ -122,24 +62,24 @@ const PlayNext = async (track: Song, guildId: string) => {
     }
 };
 
-const GetConnection = async (interaction: CommandInteraction, guild: Guild, member: GuildMember): Promise<VoiceConnection> => {
-    var connection = getVoiceConnection(guild.id);
-    if (!connection) {
-        connection = joinVoiceChannel({
-            channelId: member.voice!.channel!.id,
-            adapterCreator: interaction.guild!.voiceAdapterCreator,
-            guildId: interaction.guild!.id,
-        });
-        player = createAudioPlayer();
-        player.setMaxListeners(0);
+async function SetGuildConnectionTimeout(guildId: string, callback: () => void, delay: number = 1000 * 60 * 5) {
+    try {
+        guildConstructors.get(guildId)!.guildConnectionTimeouts = setTimeout(callback, delay);
+    } catch (error) {
+        console.error(error);
     }
-    return connection;
-};
+}
 
-const isSongList = async (tracks: Song | SongList): Promise<boolean> => {
-    if ((tracks as SongList).Songs !== undefined) return true;
-    else return false;
-};
+async function ClearGuildConnectionTimeout(guildId: string) {
+    try {
+        if (guildConstructors.get(guildId)!.guildConnectionTimeouts) {
+            clearTimeout(guildConstructors.get(guildId)!.guildConnectionTimeouts);
+            guildConstructors.get(guildId)!.guildConnectionTimeouts = undefined;
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
 
 export const Play: Command = {
     data: new SlashCommandBuilder()
@@ -149,10 +89,26 @@ export const Play: Command = {
 
     run: async (interaction: CommandInteraction) => {
         const guild = interaction.guild!;
+        const client = guild.members.cache.get(interaction.client.user.id)!;
         const member = guild.members.cache.get(interaction.user.id)!;
-        if (!(await CheckPermissions(interaction))) return;
-        if (!(await CheckMemberStatus(interaction, guild, member))) return;
-        const connection = await GetConnection(interaction, guild, member);
+        var connection = getVoiceConnection(guild.id);
+        if (!connection) {
+            if (!client.roles.cache.has('Connect')) {
+                await interaction.reply(`I dont have 'Connect' permission!`).then((msg) => setTimeout(() => msg.delete, 5000));
+                return;
+            }
+            if (!member.voice.channel || !member.voice.channel.id) {
+                await interaction.reply(`You must be in any voice channel!`).then((msg) => setTimeout(() => msg.delete, 5000));
+                return;
+            }
+            connection = joinVoiceChannel({
+                channelId: member.voice.channel.id,
+                adapterCreator: guild.voiceAdapterCreator,
+                guildId: guild.id,
+            });
+            player = createAudioPlayer();
+            player.setMaxListeners(0);
+        }
         if (!guildConstructors.has(guild.id)) {
             guildConstructors.set(guild.id, {
                 guildConnectionTimeouts: undefined,
@@ -166,17 +122,21 @@ export const Play: Command = {
             });
         }
         await ClearGuildConnectionTimeout(guild.id);
-        const guildConstructor = guildConstructors.get(guild.id)!;
-        const query: string = interaction.options.get('query')!.value as string;
-        const Tracks = await GetTracks(query);
-        if (Tracks == null) {
-            await interaction.reply('Something went wrong!').then((msg) => setTimeout(() => msg.delete, 5000));
+        const guildConstructor = guildConstructors.get(guild.id);
+        if (!guildConstructor) {
+            await interaction.reply('Something went wrong, Please try again!').then((msg) => setTimeout(() => msg.delete, 5000));
             return;
         }
-        if (Tracks != null && (await isSongList(Tracks))) {
-            const songList: SongList = Tracks as SongList;
-            const tracks = songList.Songs;
-            guildConstructor.songs = guildConstructor.songs.concat(tracks);
+        const query = interaction.options.get('query')?.value as string;
+        const tracks = await GetTracks(query);
+        if (!tracks || tracks === null) {
+            await interaction.reply('Something went wrong, Please try again!').then((msg) => setTimeout(() => msg.delete, 5000));
+            return;
+        }
+        const isSongList = (tracks as SongList).Songs !== undefined ? true : false;
+        if (isSongList) {
+            const songList = tracks as SongList;
+            guildConstructor.songs.concat(songList.Songs);
             const embed = new EmbedBuilder()
                 .setAuthor({ name: `${songList.Songs.length} songs added queue!` })
                 .setColor(Colors.Purple)
@@ -187,12 +147,12 @@ export const Play: Command = {
                 .setURL(songList.URL);
             await interaction.reply({ embeds: [embed] });
             if (player.state.status === AudioPlayerStatus.Idle) {
-                PlayNext(tracks.at(0)!, guild.id);
+                PlayNext(songList.Songs.at(0)!, guild.id);
                 connection.subscribe(player);
             }
         } else {
-            const song: Song = Tracks as Song;
-            guildConstructor!.songs.push(song);
+            const song: Song = tracks as Song;
+            guildConstructor.songs.push(song);
             if (player.state.status === AudioPlayerStatus.Idle) {
                 PlayNext(song, guild.id);
                 connection.subscribe(player);
@@ -262,6 +222,11 @@ export const Queue: Command = {
                 await interaction.reply('I am not in any voice channel').then((msg) => setTimeout(() => msg.delete(), 5000));
                 return;
             }
+            function formatQueueSong(index: number, songTitle: string, songURL: string): string {
+                const indexLength = index.toString().length;
+                const padding = indexLength === 3 ? ' ' : indexLength === 2 ? '  ' : indexLength === 1 ? '   ' : '    ';
+                return `**${index + 1}.)**${padding}[${songTitle}](${songURL})`;
+            }
             const songsList = guildConstructor.songs?.map((song, index) => formatQueueSong(index, song.Title, song.URL)).join('\n');
             const embed = new EmbedBuilder()
                 .setColor(Colors.Purple)
@@ -296,10 +261,10 @@ export const NowPlaying: Command = {
             }
             const embed = new EmbedBuilder()
                 .setColor(Colors.Purple)
-                .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
+                .setAuthor({ name: 'Now playing!' })
                 .setFooter({ text: `Requested by ${member.displayName}`, iconURL: member.displayAvatarURL() as string })
-                .setTitle(`Now playing!`)
-                .setDescription(`**[${song.Title}](${song.URL})**`)
+                .setTitle(song.Title)
+                .setURL(song.URL)
                 .setThumbnail(song.IconURL)
                 .setFields(
                     { name: 'Artist', value: `[${song.Author.Name}](${song.Author.URL})`, inline: true },
@@ -342,9 +307,10 @@ export const Skip: Command = {
             }
             embed
                 .setColor(Colors.Purple)
-                .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
+                .setAuthor({ name: 'Skipped, Now playing!' })
                 .setFooter({ text: `Requested by ${member.displayName}`, iconURL: member.displayAvatarURL() as string })
-                .setDescription(`**[${song.Title}](${song.URL})**`)
+                .setTitle(song.Title)
+                .setURL(song.URL)
                 .setThumbnail(song.IconURL)
                 .setFields(
                     { name: 'Artist', value: `[${song.Author.Name}](${song.Author.URL})`, inline: true },
@@ -435,9 +401,10 @@ export const SkipTo: Command = {
             }
             embed
                 .setColor(Colors.Purple)
-                .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
+                .setAuthor({ name: 'Skipped, Now playing!' })
                 .setFooter({ text: `Requested by ${member.displayName}`, iconURL: member.displayAvatarURL() as string })
-                .setDescription(`**[${song.Title}](${song.URL})**`)
+                .setTitle(song.Title)
+                .setURL(song.URL)
                 .setThumbnail(song.IconURL)
                 .setFields(
                     { name: 'Artist', value: `[${song.Author.Name}](${song.Author.URL})`, inline: true },
@@ -514,11 +481,16 @@ export const RemoveAt: Command = {
                 }
                 const song = guildConstructor.songs.at(index - 1)!;
                 guildConstructor.songs.splice(index - 1, 1);
+                function formatQueueSong(index: number, songTitle: string, songURL: string): string {
+                    const indexLength = index.toString().length;
+                    const padding = indexLength === 3 ? ' ' : indexLength === 2 ? '  ' : indexLength === 1 ? '   ' : '    ';
+                    return `**${index + 1}.)**${padding}[${songTitle}](${songURL})`;
+                }
                 const embed = new EmbedBuilder()
                     .setColor(Colors.Purple)
                     .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
                     .setFooter({ text: `Requested by ${member.displayName}`, iconURL: member.displayAvatarURL() as string })
-                    .addFields({ name: 'Removed from Queue!', value: `**${index}.)**[${song.Title}](${song.URL})` })
+                    .addFields({ name: 'Removed from Queue!', value: formatQueueSong(index, song.Title, song.URL) })
                     .setThumbnail(song.IconURL);
                 await interaction.reply({ embeds: [embed] });
             }
@@ -545,10 +517,10 @@ export const Back: Command = {
                 PlayNext(song, guild.id);
                 const embed = new EmbedBuilder()
                     .setColor(Colors.Purple)
-                    .setAuthor({ name: guild.name, iconURL: guild.iconURL() as string })
+                    .setAuthor({ name: 'Now playing!' })
                     .setFooter({ text: `Requested by ${member.displayName}`, iconURL: member.displayAvatarURL() as string })
-                    .setTitle(`Now playing!`)
-                    .setDescription(`**[${song.Title}](${song.URL})**`)
+                    .setTitle(song.Title)
+                    .setURL(song.URL)
                     .setThumbnail(song.IconURL)
                     .setFields(
                         { name: 'Artist', value: `[${song.Author.Name}](${song.Author.URL})`, inline: true },
